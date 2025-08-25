@@ -7,24 +7,22 @@ import React, { useMemo, useState, useEffect } from "react";
  * --------------------------------------------------
  * • Shows all tasks for any chosen date between Aug 26, 2025 and Dec 5, 2025
  * • Rotation rules (per user):
- *   - Trash: 1 person per week, rotates A→G
- *   - Vacuum: 1 person per week, rotates A→G
+ *   - Trash: 1 person per week, rotates among all 7
+ *   - Vacuum: 1 person per week, rotates among all 7 (independent of Trash)
  *   - Bathroom & Shower: 1 per group per week
- *       Group 1 (4 ppl): A,B,C,D → rotates weekly
- *       Group 2 (3 ppl): E,F,G → rotates weekly
- *   - Living Room & Table: every other day across ALL members A→G (no sink duty)
- *
- * People order A..G -> ["Leo","Phil","Karti","Andrew","Eli","Mitchell","Hall"]
+ *       Group 1 (Leo, Phil, Karti, Andrew) → rotates weekly
+ *       Group 2 (Eli, Mitchell, Hall) → rotates weekly
+ *   - Living Room & Table: every other day across all members (independent rotation)
  */
 
 // ---- Constants ----
-const NAMES = ["Leo", "Phil", "Karti", "Andrew", "Eli", "Mitchell", "Hall"]; // A..G
+const NAMES = ["Leo", "Phil", "Karti", "Andrew", "Eli", "Mitchell", "Hall"];
 const START_DATE = new Date("2025-08-26T00:00:00"); // inclusive
 const END_DATE = new Date("2025-12-05T23:59:59"); // inclusive
 
-// Groups: indices into NAMES
-const GROUP1 = [0, 1, 2, 3]; // A-D -> Leo, Phil, Karti, Andrew
-const GROUP2 = [4, 5, 6]; // E-G -> Eli, Mitchell, Hall
+// Groups
+const GROUP1 = ["Leo", "Phil", "Karti", "Andrew"];
+const GROUP2 = ["Eli", "Mitchell", "Hall"];
 
 // Utility helpers
 function clampDate(d) {
@@ -41,13 +39,11 @@ function toDateInputValue(d) {
 }
 
 function fromDateInputValue(v) {
-  // Treat as local date
   const [y, m, d] = v.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
 function daysBetween(a, b) {
-  // floor difference in whole days
   const MS = 24 * 60 * 60 * 1000;
   const aUTC = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const bUTC = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
@@ -55,13 +51,8 @@ function daysBetween(a, b) {
 }
 
 function weekIndexFor(date) {
-  // Week 0 starts on START_DATE, increments every 7 days
   const diff = daysBetween(START_DATE, date);
   return Math.floor(diff / 7);
-}
-
-function personByIndex(i) {
-  return NAMES[i % NAMES.length];
 }
 
 // Compute assignments for a given date
@@ -69,29 +60,66 @@ function assignmentsFor(date) {
   if (date < START_DATE || date > END_DATE) return null;
   const w = weekIndexFor(date);
 
-  // Trash & Vacuum rotate weekly through A..G
-  const trashIdx = w % NAMES.length;
-  const vacuumIdx = (w + 3) % NAMES.length; // staggered so Trash and Vacuum are different people
+  // --- Base rotations ---
+  // Trash: start with Hall on week 0
+  let trashIdx = (w + NAMES.indexOf("Hall")) % NAMES.length;
 
-  // Bathroom & Shower rotate weekly within their groups
-  const bath1Idx = GROUP1[w % GROUP1.length];
-  const bath2Idx = GROUP2[w % GROUP2.length];
+  // Bathrooms (base)
+  let bath1 = GROUP1[w % GROUP1.length];
+  let bath2 = GROUP2[w % GROUP2.length];
 
-  // Living Room & Table: every other day sequence starting START_DATE
+  // Resolve conflicts: ensure weekly roles are all distinct
+  // Priority: keep week-0 trash = Hall; adjust bathrooms if conflict with Hall on week 0
+  if (w === 0 && (NAMES[trashIdx] === bath1 || NAMES[trashIdx] === bath2)) {
+    if (NAMES[trashIdx] === bath1) {
+      // advance within GROUP1 until different from Hall
+      let i = (w + 1) % GROUP1.length;
+      while (GROUP1[i] === NAMES[trashIdx]) i = (i + 1) % GROUP1.length;
+      bath1 = GROUP1[i];
+    }
+    if (NAMES[trashIdx] === bath2) {
+      let j = (w + 1) % GROUP2.length;
+      while (GROUP2[j] === NAMES[trashIdx]) j = (j + 1) % GROUP2.length;
+      bath2 = GROUP2[j];
+    }
+  }
+
+  // For other weeks: if Trash collides with a bathroom assignee, advance trash until unique
+  if (w !== 0) {
+    const used = new Set([bath1, bath2]);
+    let safety = 0;
+    while (used.has(NAMES[trashIdx]) && safety < 10) {
+      trashIdx = (trashIdx + 1) % NAMES.length;
+      safety++;
+    }
+  }
+
+  const trash = NAMES[trashIdx];
+
+  // Vacuum base (offset from w) then adjust to avoid any collisions
+  let vacuumIdx = (w + 3) % NAMES.length;
+  const used2 = new Set([trash, bath1, bath2]);
+  let guard = 0;
+  while (used2.has(NAMES[vacuumIdx]) && guard < 10) {
+    vacuumIdx = (vacuumIdx + 1) % NAMES.length;
+    guard++;
+  }
+  const vacuum = NAMES[vacuumIdx];
+
+  // Living Room every other day (independent)
   const dayOffset = daysBetween(START_DATE, date);
   let living = null;
   if (dayOffset % 2 === 0) {
-    const livingTurns = Math.floor(dayOffset / 2); // 0,1,2,...
-    const livingIdx = livingTurns % NAMES.length;
-    living = NAMES[livingIdx];
+    const livingTurns = Math.floor(dayOffset / 2);
+    living = NAMES[livingTurns % NAMES.length];
   }
 
   return {
-    trash: NAMES[trashIdx],
-    vacuum: NAMES[vacuumIdx],
-    bathroomGroup1: NAMES[bath1Idx],
-    bathroomGroup2: NAMES[bath2Idx],
-    livingRoom: living, // may be null on off-days
+    trash,
+    vacuum,
+    bathroomGroup1: bath1,
+    bathroomGroup2: bath2,
+    livingRoom: living,
   };
 }
 
@@ -114,7 +142,6 @@ function Pill({ text }) {
 }
 
 export default function CleaningScheduleApp() {
-  // Default to today, clamped into semester range
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return clampDate(
@@ -122,7 +149,6 @@ export default function CleaningScheduleApp() {
     );
   });
 
-  // keep selectedDate inside bounds if user moves system clock
   useEffect(() => {
     setSelectedDate((d) => clampDate(d));
   }, []);
@@ -223,10 +249,10 @@ export default function CleaningScheduleApp() {
           <div className="grid sm:grid-cols-2 gap-4">
             <Card title="🗑 Trash (weekly)">{data.trash}</Card>
             <Card title="🧹 Vacuum (weekly)">{data.vacuum}</Card>
-            <Card title="🚿 Bathroom + Shower – Group 1 (Leo, Phil, Karti, Andrew)">
+            <Card title="🚿 Bathroom + Shower – Group 1">
               {data.bathroomGroup1}
             </Card>
-            <Card title="🚿 Bathroom + Shower – Group 2 (Eli, Mitchell, Hall)">
+            <Card title="🚿 Bathroom + Shower – Group 2">
               {data.bathroomGroup2}
             </Card>
             <div className="sm:col-span-2">
@@ -247,15 +273,6 @@ export default function CleaningScheduleApp() {
             date between Aug 26 and Dec 5, 2025.
           </div>
         )}
-
-        <footer className="mt-8 text-sm text-gray-500">
-          <div className="mb-2 font-medium">Members:</div>
-          <div className="flex flex-wrap gap-2">
-            {NAMES.map((n, i) => (
-              <Pill key={i} text={n} />
-            ))}
-          </div>
-        </footer>
       </div>
     </div>
   );
