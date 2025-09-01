@@ -60,41 +60,28 @@ function assignmentsFor(date) {
   if (date < START_DATE || date > END_DATE) return null;
   const w = weekIndexFor(date);
 
+  const dayOffset = daysBetween(START_DATE, date);
+  let trash = null;
+  let living = null;
+
+  if (dayOffset % 2 === 0) {
+    // Trash day
+    const turns = Math.floor(dayOffset / 2);
+    const startIdx = NAMES.indexOf("Hall"); // Hall starts first
+    trash = NAMES[(startIdx + turns) % NAMES.length];
+  } else {
+    // Living day
+    const turns = Math.floor(dayOffset / 2);
+    const startIdx = 0; // starts with Leo
+    living = NAMES[(startIdx + turns) % NAMES.length];
+  }
+
   // --- Base rotations ---
   // Trash: start with Hall on week 0
-  let trashIdx = (w + NAMES.indexOf("Hall")) % NAMES.length;
 
   // Bathrooms (base)
   let bath1 = GROUP1[w % GROUP1.length];
   let bath2 = GROUP2[w % GROUP2.length];
-
-  // Resolve conflicts: ensure weekly roles are all distinct
-  // Priority: keep week-0 trash = Hall; adjust bathrooms if conflict with Hall on week 0
-  if (w === 0 && (NAMES[trashIdx] === bath1 || NAMES[trashIdx] === bath2)) {
-    if (NAMES[trashIdx] === bath1) {
-      // advance within GROUP1 until different from Hall
-      let i = (w + 1) % GROUP1.length;
-      while (GROUP1[i] === NAMES[trashIdx]) i = (i + 1) % GROUP1.length;
-      bath1 = GROUP1[i];
-    }
-    if (NAMES[trashIdx] === bath2) {
-      let j = (w + 1) % GROUP2.length;
-      while (GROUP2[j] === NAMES[trashIdx]) j = (j + 1) % GROUP2.length;
-      bath2 = GROUP2[j];
-    }
-  }
-
-  // For other weeks: if Trash collides with a bathroom assignee, advance trash until unique
-  if (w !== 0) {
-    const used = new Set([bath1, bath2]);
-    let safety = 0;
-    while (used.has(NAMES[trashIdx]) && safety < 10) {
-      trashIdx = (trashIdx + 1) % NAMES.length;
-      safety++;
-    }
-  }
-
-  const trash = NAMES[trashIdx];
 
   // Vacuum base (offset from w) then adjust to avoid any collisions
   let vacuumIdx = (w + 3) % NAMES.length;
@@ -107,12 +94,6 @@ function assignmentsFor(date) {
   const vacuum = NAMES[vacuumIdx];
 
   // Living Room every other day (independent)
-  const dayOffset = daysBetween(START_DATE, date);
-  let living = null;
-  if (dayOffset % 2 === 0) {
-    const livingTurns = Math.floor(dayOffset / 2);
-    living = NAMES[livingTurns % NAMES.length];
-  }
 
   return {
     trash,
@@ -247,7 +228,7 @@ export default function CleaningScheduleApp() {
 
         {data ? (
           <div className="grid sm:grid-cols-2 gap-4">
-            <Card title="🗑 Trash (weekly)">{data.trash}</Card>
+            <Card title="🗑 Trash (every other day)">{data.trash}</Card>
             <Card title="🧹 Vacuum (weekly)">{data.vacuum}</Card>
             <Card title="🚿 Bathroom + Shower – Group 1">
               {data.bathroomGroup1}
