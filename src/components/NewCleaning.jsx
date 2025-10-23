@@ -165,10 +165,10 @@ export default function CleaningScheduleDisplay() {
       {/* Right side panel */}
       <div className="absolute right-0 top-0 bottom-0 flex flex-col items-center justify-end p-6 space-y-6 text-white">
         {/* Task card */}
-        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 shadow-lg text-center max-w-xs w-full">
-          <div className="text-lg font-bold mb-2">Today, {date}</div>
+        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-8 shadow-lg text-center max-w-xs w-full min-h-48">
+          <div className="text-4xl font-bold mb-4">Today, {date}</div>
           {!stopped && (
-            <ul className="space-y-2 text-base">
+            <ul className="space-y-3 text-4xl">
               {tasks.map((t, i) => (
                 <li key={i}>
                   {t.task}: <span className="font-semibold">{t.person}</span>
