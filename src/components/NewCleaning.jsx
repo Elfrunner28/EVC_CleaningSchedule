@@ -118,6 +118,9 @@ export default function CleaningScheduleDisplay() {
     };
 
     loadImages();
+    const interval = setInterval(loadImages, 6000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Cycle through images every 20s (was 1s)
