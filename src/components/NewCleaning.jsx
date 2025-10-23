@@ -141,7 +141,7 @@ export default function CleaningScheduleDisplay() {
           key={imageUrl}
           src={imageUrl}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+          className="absolute inset-0 w-full h-full object-contain bg-black"
           style={{ opacity: imageIdx === idx ? 1 : 0 }}
         />
       ))}
@@ -149,13 +149,18 @@ export default function CleaningScheduleDisplay() {
       {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-black/50" />
 
-      {/* Foreground Card */}
+      {/* Foreground */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-8 shadow-lg text-center text-white max-w-md w-full">
-          <div className="text-xl font-bold mb-1">Today, {date}</div>
+        {/* Center content is now EMPTY since we’re moving tasks to right */}
+      </div>
 
+      {/* Right side panel */}
+      <div className="absolute right-0 top-0 bottom-0 flex flex-col items-center justify-end p-6 space-y-6 text-white">
+        {/* Task card */}
+        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 shadow-lg text-center max-w-xs w-full">
+          <div className="text-lg font-bold mb-2">Today, {date}</div>
           {!stopped && (
-            <ul className="space-y-2 text-lg">
+            <ul className="space-y-2 text-base">
               {tasks.map((t, i) => (
                 <li key={i}>
                   {t.task}: <span className="font-semibold">{t.person}</span>
@@ -164,8 +169,10 @@ export default function CleaningScheduleDisplay() {
             </ul>
           )}
         </div>
+
+        {/* QR code below */}
+        <UploadQR />
       </div>
-      <UploadQR />
     </div>
   );
 }
