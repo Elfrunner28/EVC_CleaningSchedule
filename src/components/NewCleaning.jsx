@@ -4,8 +4,15 @@ import { initializeApp } from "firebase/app";
 import { listAll, ref, getStorage, getDownloadURL } from "firebase/storage";
 import { UploadQR } from "./UploadQR";
 
-// ======= CONFIG =======
-// 3‑day rotation defined by the user
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const ROTATION = [
   {
     label: "Day 1 (Wednesday template)",
@@ -30,9 +37,8 @@ const ROTATION = [
   },
 ];
 
-const ANCHOR_LOCAL = new Date(2025, 9, 22); // months 0-based: 9 = October
+const ANCHOR_LOCAL = new Date(2025, 9, 22);
 
-// Hard cutoff: stop showing schedule after this date (inclusive end on Dec 15)
 const CUTOFF_LOCAL_END = new Date(2025, 11, 15, 23, 59, 59, 999); // Dec 15, 2025 23:59:59.999
 
 // Firebase
@@ -53,7 +59,6 @@ function formatToday() {
 }
 
 function getDaysSinceAnchor(today = new Date()) {
-  // strip time for both dates for a clean day-diff in local time
   const a = new Date(
     ANCHOR_LOCAL.getFullYear(),
     ANCHOR_LOCAL.getMonth(),
@@ -80,7 +85,7 @@ function getTodayTasks() {
 
   const delta = getDaysSinceAnchor(now);
   const dayIndex =
-    ((delta % ROTATION.length) + ROTATION.length) % ROTATION.length; // safe mod
+    ((delta % ROTATION.length) + ROTATION.length) % ROTATION.length;
   const { tasks, label } = ROTATION[dayIndex];
 
   return {
@@ -100,18 +105,23 @@ export default function CleaningScheduleDisplay() {
     []
   );
 
-  // Load background images from Firebase Storage root folder
   useEffect(() => {
     const loadImages = async () => {
       try {
         const folderRef = ref(storage, "");
         const listings = await listAll(folderRef);
-        const imagePromises = listings.items.map(
-          async (img) => await getDownloadURL(img)
-        );
+        const imagePromises = listings.items.map((img) => getDownloadURL(img));
         const imageUrls = await Promise.all(imagePromises);
-        setImages(imageUrls);
-        console.log("Loaded images:", imageUrls);
+
+        const shuffled = shuffleArray(imageUrls);
+
+        setImages(shuffled);
+
+        if (shuffled.length > 0) {
+          setIdx(Math.floor(Math.random() * shuffled.length));
+        }
+
+        console.log("Loaded (shuffled) images:", shuffled);
       } catch (error) {
         console.error("Error loading images:", error);
       }
@@ -119,11 +129,9 @@ export default function CleaningScheduleDisplay() {
 
     loadImages();
     const interval = setInterval(loadImages, 60000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Cycle through images every 20s (was 1s)
   useEffect(() => {
     if (images.length > 0) {
       const t = setInterval(
