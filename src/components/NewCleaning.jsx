@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { initializeApp } from "firebase/app";
 import { listAll, ref, getStorage, getDownloadURL } from "firebase/storage";
+import { UploadQR } from "./UploadQR";
 
 // ======= CONFIG =======
 // 3‑day rotation defined by the user
@@ -29,9 +30,6 @@ const ROTATION = [
   },
 ];
 
-// Anchor date that corresponds to ROTATION[0].
-// We'll use Oct 22, 2025 (a Wednesday in America/Chicago) as Day 1.
-// Change if you want a different starting point.
 const ANCHOR_LOCAL = new Date(2025, 9, 22); // months 0-based: 9 = October
 
 // Hard cutoff: stop showing schedule after this date (inclusive end on Dec 15)
@@ -164,6 +162,7 @@ export default function CleaningScheduleDisplay() {
           )}
         </div>
       </div>
+      <UploadQR />
     </div>
   );
 }

@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      { "source": "/upload", "destination": "/upload.html" },
+      { "source": "**", "destination": "/index.html" }
+    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}
