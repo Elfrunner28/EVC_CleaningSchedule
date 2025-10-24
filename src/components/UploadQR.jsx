@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export function UploadQR({
-  href = "https://YOUR_PROJECT.web.app/upload.html",
+  href = "https://esp-project-1621c.web.app/upload.html",
   size = 200,
   className = "",
   inline = true, // when true, no absolute positioning
