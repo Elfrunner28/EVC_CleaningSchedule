@@ -10,8 +10,7 @@ export function UploadQR({
   const [qrSrc, setQrSrc] = useState("");
 
   useEffect(() => {
-    // build-time or fixed version recommended to avoid hydration issues
-    const ver = process.env.NEXT_PUBLIC_QR_VER ?? "v1";
+    const ver = Date.now();
     const url = `${href}?v=${ver}`;
     setQrSrc(
       `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
@@ -20,7 +19,6 @@ export function UploadQR({
     );
   }, [href, size]);
 
-  // inline=true -> no absolute positioning; let parent control spacing
   const wrapperStyle = inline
     ? {}
     : { position: "absolute", bottom: 20, right: 20 };
